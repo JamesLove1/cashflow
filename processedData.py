@@ -80,3 +80,53 @@ processedData = {
         "Capital Growth": 3.60
     }
 }
+
+def calculate_sdlt(property_value, residentType):
+    
+    # SDLT Brackets for Non-UK Residents
+    sdlt_non_uk = [
+        {"from": 0, "to": 250000, "rate": 0.07, "amount": 17500},
+        {"from": 250000, "to": 925000, "rate": 0.12, "amount": 48000},
+        {"from": 925000, "to": 1500000, "rate": 0.17, "amount": None},
+        {"from": 1500000, "to": 1_000_000_000, "rate": 0.19, "amount": None},
+    ]
+
+    # SDLT Brackets for UK Residents
+    sdlt_uk = [
+        {"from": 0, "to": 250000, "rate": 0.05, "amount": 12500},
+        {"from": 250000, "to": 925000, "rate": 0.10, "amount": 40000},
+        {"from": 925000, "to": 1500000, "rate": 0.15, "amount": None},
+        {"from": 1500000, "to": 1_000_000_000, "rate": 0.17, "amount": None},
+    ]
+
+    if residentType == "UK Resident":
+        sdlt_brackets = sdlt_uk
+    else:
+        sdlt_brackets = sdlt_non_uk
+    
+    tax = 0
+    remaining_value = property_value
+
+    for bracket in sdlt_brackets:
+        if remaining_value <= 0:
+            break
+
+        lower, upper, rate, fixed_amount = bracket["from"], bracket["to"], bracket["rate"], bracket["amount"]
+
+        # If bracket has a fixed amount, use it
+        if fixed_amount is not None and property_value > lower:
+            tax += fixed_amount
+        else:
+            taxable_amount = min(remaining_value, upper - lower)
+            tax += taxable_amount * rate
+
+        remaining_value -= (upper - lower)
+
+    return tax
+
+purchaser_costs = {
+    "Legal Fees": 2000,
+    "Valuation": 500,
+    "Survey": 500,
+    "Other (Misc)": 500
+}

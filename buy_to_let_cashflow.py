@@ -4,53 +4,31 @@ from datetime import datetime
 import calendar
 import math
 
-from processedData import processedData
+from processedData import processedData, calculate_sdlt, purchaser_costs
 
-def rpi_multiplyer(present_year):
-    return (1+RPI)**(present_year - startYear)
+def rpi_multiplyer(present_year, startYear):
+    rpi = 0.0325
+    return (1+rpi)**(present_year - startYear)
 
-# ====== Input Data===========
-Property_Location = "Greater London"                   # turn into an enum
-Property_Type = "Apartment"                            # turn into an enum
-Property_Value_GBP = 650000
-Monthly_Gross_Rent_GBP = 2750
-Annual_Ground_Rent_and_Service_Charge_GBP = 0
-Your_Place_of_Residency = "UK Resident"                # turn into an enum
-What_Entity_is_Purchasing_the_Property = "Company"     # turn into an enum
-Are_you_financing_the_Property_with_a_Mortgage = "Yes" # turn into an enum
+def add_rent(df, startyear, Monthly_Gross_Rent_GBP):
 
-# ====== Key Financial Assumptions ============
-
-RPI = 0.0325
-# Purchasers_Costs = None
-# Monthly_Gross_Rent_GBP = None
-# Expected_Annual_Vacancy = None
-# Management_and_Letting_Fees_pa = None
-# Ground_Rent_and_Service_Charges_pa = None
-# Property_Insurance_pa = None
-# Maintenaince_Cost_pa = None
-# Interest_Rate_on_Borrowings = None
-# Expected_Rental_Growth_pa = None
-# Expected_Capital_Growth_pa = None
-
-def add_rent(df):
-
-    df["Gross Rent (Full Occupancy)"] = (Monthly_Gross_Rent_GBP * rpi_multiplyer(df.index.year)).round(0)
+    df["Gross Rent (Full Occupancy)"] = (Monthly_Gross_Rent_GBP * rpi_multiplyer(df.index.year,
+                                         startyear)).round(0)
     df["Gross Rent (Full Occupancy)"] = df["Gross Rent (Full Occupancy)"].astype(int)
 
-def add_man_and_letting_fees(df):
+def add_man_and_letting_fees(df, startYear, Property_Location):
     
     fees =  processedData[Property_Location]["Average Property Management & Letting Fees"]
     fees = fees / 100
 
-    inflationAdjFees = fees * rpi_multiplyer(df.index.year)
+    inflationAdjFees = fees * rpi_multiplyer(df.index.year, startYear)
 
     newColExFeesAdj =  df["Void (Vacancy)"] + df["Gross Rent (Full Occupancy)"]
 
     df["Property Management and Letting Fees"] = - newColExFeesAdj * inflationAdjFees
     df["Property Management and Letting Fees"] = df["Property Management and Letting Fees"].astype(int)
 
-def add_vacancy(df):
+def add_vacancy(df, Property_Location):
 
     percentageVacancyRate = processedData[Property_Location]["Average Annual Vacancy"]
 
@@ -75,11 +53,11 @@ def add_Net_Rent(df):
     rentPlusVoid = df["Gross Rent (Full Occupancy)"] + df["Void (Vacancy)"] 
     df["Net Rent"] = rentPlusVoid + df["Property Management and Letting Fees"]
 
-def add_property_insurance(df):
+def add_property_insurance(df, startYear, Property_Location, Property_Value_GBP):
     property_insurance_rate = processedData[Property_Location]["Average Property Insurance"] / 100
     amortilised_property = Property_Value_GBP / 12 
     insurance =  property_insurance_rate * amortilised_property
-    insurance_inflation_adj = insurance * rpi_multiplyer(df.index.year)
+    insurance_inflation_adj = insurance * rpi_multiplyer(df.index.year, startYear)
 
     df["Property Insurance"] = - insurance_inflation_adj 
 
@@ -87,10 +65,10 @@ def add_property_insurance(df):
 
     df["Property Insurance"] = df["Property Insurance"].astype(int)
     
-def add_maintenaince(df, Property_Value_GBP):
+def add_maintenaince(df, Property_Value_GBP, startYear, Property_Location):
     
     amotilised_property_cost = Property_Value_GBP / 12
-    property_adj_inflation = amotilised_property_cost * rpi_multiplyer(df.index.year)
+    property_adj_inflation = amotilised_property_cost * rpi_multiplyer(df.index.year, startYear)
     maintenace_rate = processedData[Property_Location]["Average Maintenance Spend"] / 100
     
     df["Maintenaince"] = - property_adj_inflation * maintenace_rate
@@ -100,42 +78,111 @@ def add_maintenaince(df, Property_Value_GBP):
 def add_net_income(df):
     df["net_income"] = df["Net Rent"] + df["Property Insurance"] + df["Maintenaince"]
 
-# ====== Cash flow ===========================
-
-rent =  1000
-numPeriods = 120
-startYear = 2025
-
-# date = datetime.now()
-startDate = datetime(year=startYear, month=1, day=1)
-
-data = {
-    "Date":   pd.date_range(startDate, periods=numPeriods, freq="ME"), 
-    # "Net Income": [None for _ in range(0, numPeriods)],
-}
-
-df = pd.DataFrame(data=data).set_index("Date")
-
-add_rent(df)
-
-add_vacancy(df)
-
-add_man_and_letting_fees(df)
-
-add_ground_rent(df, Annual_Ground_Rent_and_Service_Charge_GBP)
-
-add_Net_Rent(df)
-
-add_property_insurance(df)
+def add_total_target_purchase_price(df, Property_Value_GBP):
     
-add_maintenaince(df, Property_Value_GBP)
+    df["total_target_purchase_price"] = None  # Initialize column if missing
 
-add_net_income(df)
+    df.at[df.index[0], "total_target_purchase_price"] = -Property_Value_GBP
+
+def add_SDLT(df, Your_Place_of_Residency, Property_Value_GBP):
+    
+    df["SDLT"] = None
+    
+    tax = calculate_sdlt(Property_Value_GBP, Your_Place_of_Residency)
+    
+    df.at[df.index[0],"SDLT"] = -tax
+    
+def purcheser_fees(df):
+        
+        fees = ["Legal Fees", "Valuation", "Survey", "Other (Misc)"]
+        
+        for fee in fees:
+            
+            df[fee] = None
+        
+            df.at[df.index[0], fee] = -purchaser_costs[fee]
+
+def all_in_Acquistion_Cost(df, Property_Value_GBP, Your_Place_of_Residency):
+    
+    df["All-in Acquistion Cost"] = None
+    
+    fees = ["Legal Fees", "Valuation", "Survey", "Other (Misc)"]
+    
+    cnt = 0
+    
+    for fee in fees:
+        
+        cnt += df.at[df.index[0], fee] 
+    
+    cnt -= calculate_sdlt(Property_Value_GBP, Your_Place_of_Residency)
+    cnt += df.at[df.index[0], "total_target_purchase_price"]
+    
+    df.at[df.index[0], "All-in Acquistion Cost"] = cnt    
+
+def printToExcel(df):
+    df.T.to_excel("out.xlsx", engine="openpyxl")
+    
+def cash_flow(Monthly_Gross_Rent_GBP,
+              Property_Location = "Greater London",                  # turn into an enum
+              Annual_Ground_Rent_and_Service_Charge_GBP = 0,
+              Property_Value_GBP = 650000,
+              Property_Type = "Apartment",                            # turn into an enum
+              Your_Place_of_Residency = "UK Resident",                # turn into an enum
+              What_Entity_is_Purchasing_the_Property = "Company",     # turn into an enum
+              Are_you_financing_the_Property_with_a_Mortgage = "Yes" # turn into an enum
+              ):
+    
+    numPeriods = 120
+    startYear = 2025
+    startDate = datetime(year=startYear, month=1, day=1)
+
+    data = {
+        "Date":   pd.date_range(startDate, periods=numPeriods, freq="ME"), 
+    }
+
+    df = pd.DataFrame(data=data).set_index("Date")
+
+    add_rent(df, startYear, Monthly_Gross_Rent_GBP)
+
+    add_vacancy(df, Property_Location)
+
+    add_man_and_letting_fees(df, startYear, Property_Location)
+
+    add_ground_rent(df, Annual_Ground_Rent_and_Service_Charge_GBP)
+
+    add_Net_Rent(df)
+
+    add_property_insurance(df,startYear, Property_Location, Property_Value_GBP)
+
+    add_maintenaince(df, Property_Value_GBP, startYear, Property_Location)
+
+    add_net_income(df)   
+
+    add_total_target_purchase_price(df, Property_Value_GBP)
+
+    df["Purchaser's Costs"] = None
+    
+    add_SDLT(df, Your_Place_of_Residency, Property_Value_GBP)
+
+    purcheser_fees(df)
+
+    all_in_Acquistion_Cost(df, Property_Value_GBP, Your_Place_of_Residency)
+
+    print(df.loc[:, "net_income": ].head(5))
+    print(df.loc[:, "net_income": ].tail(5))
 
 
+# ====== Input Data===========
+
+cash_flow(Monthly_Gross_Rent_GBP = 2750,
+          Property_Location = "Greater London",                  # turn into an enum
+          Annual_Ground_Rent_and_Service_Charge_GBP = 0,
+          Property_Value_GBP = 650000,
+          Property_Type = "Apartment",                            # turn into an enum
+          Your_Place_of_Residency = "UK Resident",                # turn into an enum
+          What_Entity_is_Purchasing_the_Property = "Company",     # turn into an enum
+          Are_you_financing_the_Property_with_a_Mortgage = "Yes" # turn into an enum
+          )
 
 
-startDate = datetime(year=startYear, month=1, day=1)
-print(df.head(5))
-print(df.tail(5))
 
