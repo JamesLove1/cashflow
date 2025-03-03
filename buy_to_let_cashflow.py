@@ -119,6 +119,22 @@ def all_in_Acquistion_Cost(df, Property_Value_GBP, Your_Place_of_Residency):
     
     df.at[df.index[0], "All-in Acquistion Cost"] = cnt    
 
+def portfolio_disposal(df, Property_Location, startYear):
+      
+      df["portfolio_disposal"] = None
+      
+      Total_Target_Purchase_Price = df.at[df.index[0], "total_target_purchase_price"]
+
+      caitalGrowth = processedData[Property_Location]["Capital Growth"] / 100
+      
+      growthMutiplyer = (1+caitalGrowth)**(df.index[-1].year-startYear)
+      
+      salePrice = abs(Total_Target_Purchase_Price) * growthMutiplyer 
+      
+      df.at[df.index[-1], "portfolio_disposal"] = round(salePrice,0) 
+        
+        
+
 def printToExcel(df):
     df.T.to_excel("out.xlsx", engine="openpyxl")
     
@@ -167,9 +183,11 @@ def cash_flow(Monthly_Gross_Rent_GBP,
     purcheser_fees(df)
 
     all_in_Acquistion_Cost(df, Property_Value_GBP, Your_Place_of_Residency)
+    
+    portfolio_disposal(df, Property_Location, startYear)
 
-    print(df.loc[:, "net_income": ].head(5))
-    print(df.loc[:, "net_income": ].tail(5))
+    print(df.loc[:, "Valuation": ].head(5))
+    print(df.loc[:, "Valuation": ].tail(5))
 
 
 # ====== Input Data===========
