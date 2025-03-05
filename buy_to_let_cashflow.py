@@ -4,19 +4,19 @@ from datetime import datetime
 import calendar
 import math
 
-from processedData import processedData, calculate_sdlt, purchaser_costs
+from processedData import processedData, calculate_sdlt, purchaser_costs, buy_to_let_morgage_calculator
 
 class cashflow():
 
     def __init__(self,
                  Monthly_Gross_Rent_GBP,
-                 Property_Location = "Greater London",                   # turn into an enum
-                 Annual_Ground_Rent_and_Service_Charge_GBP = 0,
-                 Property_Value_GBP = 650000,
-                 Property_Type = "Apartment",                            # turn into an enum
-                 Your_Place_of_Residency = "UK Resident",                # turn into an enum
-                 What_Entity_is_Purchasing_the_Property = "Company",     # turn into an enum
-                 Are_you_financing_the_Property_with_a_Mortgage = "Yes"  # turn into an enum
+                 Property_Location,                              # turn into an enum
+                 Annual_Ground_Rent_and_Service_Charge_GBP,
+                 Property_Value_GBP,
+                 Property_Type,                                  # turn into an enum
+                 Your_Place_of_Residency,                        # turn into an enum
+                 What_Entity_is_Purchasing_the_Property,         # turn into an enum
+                 Are_you_financing_the_Property_with_a_Mortgage  # turn into an enum
                 ):
 
         numPeriods = 120
@@ -47,7 +47,7 @@ class cashflow():
 
         self.add_total_target_purchase_price(self.df, Property_Value_GBP)
 
-        self.df["Purchaser's Costs"] = 0
+        self.df["Purchaser's Costs"] = 0.0
 
         self.add_SDLT(self.df, Your_Place_of_Residency, Property_Value_GBP)
 
@@ -58,13 +58,173 @@ class cashflow():
         self.portfolio_disposal(self.df, Property_Location, startYear)
 
         self.add_unlevered_net_income_flows(self.df)
-    
+        
+        self.unlevered_net_capital_flows(self.df)
+        
+        self.unlevered_net_cash_flows(self.df)
+        
+        self.debt_drawdown(self.df, 
+                           Are_you_financing_the_Property_with_a_Mortgage,
+                           What_Entity_is_Purchasing_the_Property,
+                           Property_Value_GBP,
+                           Monthly_Gross_Rent_GBP
+                           )
+        
+        self.loan_arrangement_fees(self.df,
+                                   Are_you_financing_the_Property_with_a_Mortgage
+                                   )
+        
+        self.loan_repayment_interest(self.df,
+                                     Your_Place_of_Residency
+                                     )
+        
+        self.loan_repayment_lump_sum(self.df)
+
+        self.levered_net_income_flows(self.df)
+
+        self.levered_net_capital_flows(self.df)
+
+
+    def levered_net_capital_flows(self, df):
+        
+        df["levered_net_capital_flows"] = 0.0
+        
+        a = df["unlevered_net_capital_flows"]
+        b = df["debt_drawdown"]
+        c = df["loan_arrangement_fees"]
+        d = df["loan_repayment_lump_sum"]
+        
+        df["levered_net_capital_flows"] = a + b + c + d 
+
+    def levered_net_income_flows(self, df):
+        
+        df["levered_net_income_flows"] = 0.0
+
+        sum = df["unlevered_net_income_flows"] + df["loan_repayment_interest"]
+        df["levered_net_income_flows"] = sum
+
+
+
     def printDF(self):
-       print(self.df.loc[:, :"net_income"].head(24))
-       print(self.df.loc[:, :"net_income"].tail(5))        
+       print(self.df.loc[:, "unlevered_net_income_flows":].head(24))
+       print(self.df.loc[:, "unlevered_net_income_flows":].tail(5))        
+
+    def loan_repayment_lump_sum(self, df):
+        
+        df["loan_repayment_lump_sum"] = 0.0
+        
+        cell = df.at[df.index[0], "debt_drawdown"]
+        
+        df.at[df.index[-1], "loan_repayment_lump_sum"] = cell
+        
+        
+    def loan_repayment_interest(self, 
+                                df,
+                                Your_Place_of_Residency
+                                ):
+        
+        df["loan_repayment_interest"] = 0.0
+        
+        intrest_rate = 0
+        
+        if Your_Place_of_Residency == "UK Resident":
+        
+            intrest_rate = buy_to_let_morgage_calculator["5-Year Buy-to-Let (interest only) Mortgage rate (UK)"] / 100
+        
+        else:
+            
+            intrest_rate = buy_to_let_morgage_calculator["5-Year Buy-to-Let (interest only) Mortgage rate (Non-UK)"] / 100
+            
+            
+        debt_drawdown = df.at[df.index[0], "debt_drawdown"] 
+        
+        df["loan_repayment_interest"] = - debt_drawdown/12 * intrest_rate
+        
+    def loan_arrangement_fees(self, 
+                              df,
+                              Are_you_financing_the_Property_with_a_Mortgage
+                              ):
+        
+        df["loan_arrangement_fees"] = 0.0
+        
+        if Are_you_financing_the_Property_with_a_Mortgage == "Yes":
+        
+            arrangment_fee = buy_to_let_morgage_calculator["Loan Arrangement Fees"]
+            df.at[df.index[0], "Loan Arrangement Fees"] = arrangment_fee
+            
+        else:  
+        
+            df.at[df.index[0], "Loan Arrangement Fees"] = 0
+        
+    def debt_drawdown(self, 
+                      df, 
+                      Are_you_financing_the_Property_with_a_Mortgage,
+                      What_Entity_is_Purchasing_the_Property,
+                      Property_Value_GBP,
+                      Monthly_Gross_Rent_GBP
+                      ):
+        
+        df["debt_drawdown"] = 0.0
+        
+        debt = self.morgage(
+                Are_you_financing_the_Property_with_a_Mortgage,
+                What_Entity_is_Purchasing_the_Property,
+                Property_Value_GBP,
+                Monthly_Gross_Rent_GBP
+                )
+        
+        df.at[df.index[0], "debt_drawdown"] = debt
+        
+    def morgage(self,
+                Are_you_financing_the_Property_with_a_Mortgage,
+                What_Entity_is_Purchasing_the_Property,
+                Property_Value_GBP,
+                Monthly_Gross_Rent_GBP
+                ):
+        
+        if Are_you_financing_the_Property_with_a_Mortgage == "Yes":
+            
+            if What_Entity_is_Purchasing_the_Property == "Company": 
+                
+                stressRate = buy_to_let_morgage_calculator["Stress Rate"]/100
+                
+                cutomLTV = (Monthly_Gross_Rent_GBP*12)/stressRate/1.25/Property_Value_GBP          
+                ltv = min(cutomLTV,0.7)
+                
+                property_debit_tranch_value = Property_Value_GBP*ltv
+                return property_debit_tranch_value
+                
+            else:
+
+                stressRate = buy_to_let_morgage_calculator["Stress Rate"]/100
+                
+                cutomLTV = (Monthly_Gross_Rent_GBP*12)/stressRate/1.45/Property_Value_GBP
+                cutomLTV = round(cutomLTV, 3)            
+                ltv = min(cutomLTV,0.7)
+                
+                property_debit_tranch_value = Property_Value_GBP*ltv
+                return property_debit_tranch_value
+        
+        return 0
+            
+    
+    def unlevered_net_cash_flows(self, df):
+        
+        df["unlevered_net_cash_flows"] = 0.0
+        
+        sum = df["unlevered_net_capital_flows"]
+        sum = sum + df["unlevered_net_income_flows"]
+        df["unlevered_net_cash_flows"] = sum
+    
+    def unlevered_net_capital_flows(self, df):
+        
+        df["unlevered_net_capital_flows"] = 0.0
+        sum = df["portfolio_disposal"] + df["All-in_Acquistion_Cost"]
+        df["unlevered_net_capital_flows"] = sum       
 
     def add_unlevered_net_income_flows(self, df):
         
+        df["unlevered_net_income_flows"] = float 
         df["unlevered_net_income_flows"] = df["net_income"]
         
     def ammount_of_1GBP_for_x_years_at_RPI(self, present_year, startYear):
@@ -76,7 +236,7 @@ class cashflow():
         rpi_multiplyer = self.ammount_of_1GBP_for_x_years_at_RPI(df.index.year, startyear)
 
         df["Gross_Rent_(Full_Occupancy)"] = (Monthly_Gross_Rent_GBP * rpi_multiplyer).round(0)
-        df["Gross_Rent_(Full_Occupancy)"] = df["Gross_Rent_(Full_Occupancy)"].astype(int)
+        df["Gross_Rent_(Full_Occupancy)"] = df["Gross_Rent_(Full_Occupancy)"].astype(float)
 
     def add_man_and_letting_fees(self, df, startYear, Property_Location):
 
@@ -92,18 +252,18 @@ class cashflow():
         newColExFeesAdj *= rpi_multiplyer
         df["Property_Management_and_Letting_Fees"] = -newColExFeesAdj
 
-        df["Property_Management_and_Letting_Fees"] = df["Property_Management_and_Letting_Fees"].astype(int)
+        df["Property_Management_and_Letting_Fees"] = df["Property_Management_and_Letting_Fees"].astype(float)
 
     def add_vacancy(self, df, Property_Location):
 
         percentageVacancyRate = processedData[Property_Location]["Average Annual Vacancy"]
 
         df["Void_(Vacancy)"] = - round(df["Gross_Rent_(Full_Occupancy)"] * (percentageVacancyRate/100),0)
-        df["Void_(Vacancy)"] = df["Void_(Vacancy)"].astype(int)
+        df["Void_(Vacancy)"] = df["Void_(Vacancy)"].astype(float)
 
     def add_ground_rent(self, df, Annual_Ground_Rent_and_Service_Charge_GBP, startYear):
 
-        df["Ground_Rent_Charges_(if_any)"] = 0
+        df["Ground_Rent_Charges_(if_any)"] = 0.0
         
         if Annual_Ground_Rent_and_Service_Charge_GBP is None:
             return
@@ -122,6 +282,7 @@ class cashflow():
         
         rentPlusVoid = df["Gross_Rent_(Full_Occupancy)"] + df["Void_(Vacancy)"] 
         
+        df["Net_Rent"] = float
         df["Net_Rent"] = rentPlusVoid + df["Property_Management_and_Letting_Fees"]
 
     def add_property_insurance(self, df, startYear, Property_Location, Property_Value_GBP):
@@ -135,7 +296,7 @@ class cashflow():
 
         df["Property_Insurance"].round(0)
 
-        df["Property_Insurance"] = df["Property_Insurance"].astype(int)
+        df["Property_Insurance"] = df["Property_Insurance"].astype(float)
 
     def add_maintenaince(self, df, Property_Value_GBP, startYear, Property_Location):
 
@@ -146,20 +307,21 @@ class cashflow():
 
         df["Maintenaince"] = - property_adj_inflation * maintenace_rate
         df["Maintenaince"] = df["Maintenaince"].round(0)
-        df["Maintenaince"] = df["Maintenaince"].astype(int)
+        df["Maintenaince"] = df["Maintenaince"].astype(float)
 
     def add_net_income(self, df):
+        df["net_income"] = 0.0
         df["net_income"] = df["Net_Rent"] + df["Property_Insurance"] + df["Maintenaince"]
 
     def add_total_target_purchase_price(self, df, Property_Value_GBP):
 
-        df["total_target_purchase_price"] = 0
+        df["total_target_purchase_price"] = 0.0
 
         df.at[df.index[0], "total_target_purchase_price"] = -Property_Value_GBP
 
     def add_SDLT(self, df, Your_Place_of_Residency, Property_Value_GBP):
 
-        df["SDLT"] = 0
+        df["SDLT"] = 0.0
 
         tax = calculate_sdlt(Property_Value_GBP, Your_Place_of_Residency)
 
@@ -171,7 +333,7 @@ class cashflow():
 
             for fee in fees:
 
-                df[fee] = 0
+                df[fee] = 0.0
 
                 if fee == fees[0]:
                     df.at[df.index[0], fee] = -purchaser_costs["Legal Fees"]
@@ -184,7 +346,7 @@ class cashflow():
 
     def all_in_Acquistion_Cost(self, df, Property_Value_GBP, Your_Place_of_Residency):
 
-        df["All-in_Acquistion_Cost"] = 0
+        df["All-in_Acquistion_Cost"] = 0.0
 
         fees = ["Legal_Fees", "Valuation", "Survey", "Other_(Misc)"]
 
@@ -201,7 +363,7 @@ class cashflow():
 
     def portfolio_disposal(self, df, Property_Location, startYear):
 
-          df["portfolio_disposal"] = 0
+          df["portfolio_disposal"] = 0.0
 
           Total_Target_Purchase_Price = df.at[df.index[0], "total_target_purchase_price"]
 

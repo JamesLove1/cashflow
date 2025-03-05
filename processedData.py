@@ -130,3 +130,10 @@ purchaser_costs = {
     "Survey": 500,
     "Other (Misc)": 500
 }
+
+buy_to_let_morgage_calculator = {
+    "Stress Rate": 8.50,
+    "5-Year Buy-to-Let (interest only) Mortgage rate (Non-UK)":	6.50,
+    "5-Year Buy-to-Let (interest only) Mortgage rate (UK)":	4.50,
+    "Loan Arrangement Fees": 1000
+}

@@ -26,8 +26,63 @@ def test_unlevered_net_income_flows():
     
     assert net_income.equals(unlevered_net_income_flows)
     
-    # cf.printDF()
+def test_unlevered_net_capital_flows():
     
+    cell = cf.df.at[cf.df.index[0], "unlevered_net_capital_flows"]     
+    assert cell == -706000 
+
+    cell = cf.df.at[cf.df.index[-1], "unlevered_net_capital_flows"]     
+    assert cell ==  1184985  
     
+def test_unlevered_net_cash_flows():
+    
+    cell = cf.df.at[cf.df.index[0], "unlevered_net_cash_flows"].round()    
+    assert cell == -704403  
 
+    cell = cf.df.at[cf.df.index[-1], "unlevered_net_cash_flows"].round()
+    assert cell == 1186944 
+    
+def test_debt_drawdown():
+    
+    cell = cf.df.at[cf.df.index[0], "debt_drawdown"].round()
+    assert cell ==  310588 
 
+def loan_arrangement_fees():
+    
+    cell = cf.df.at[cf.df.index[0], "Loan Arrangement Fees"]
+    
+    assert cell == 1000
+    
+def test_loan_repayment_interest():
+    
+    cell = cf.df.at[cf.df.index[0], "loan_repayment_interest"].round()
+    
+    assert cell == -1165.0
+    
+    cell = cf.df.at[cf.df.index[-1], "loan_repayment_interest"].round()
+    
+    assert cell == -1165.0
+
+def loan_repayment_lump_sum(self, df):
+    
+    cell = df.at[df.index[0], "debt_drawdown"]
+    
+    lumpsum = df.at[df.index[-1], "loan_repayment_lump_sum"] = cell
+    
+    assert cell == lumpsum 
+    
+def test_unlevered_net_cash_flows():
+    
+    cell = cf.df.at[cf.df.index[0], "levered_net_income_flows"].round()    
+    assert cell == 432  
+
+    cell = cf.df.at[cf.df.index[-1], "levered_net_income_flows"].round()
+    assert cell == 794
+    
+def test_unlevered_net_cash_flows():
+    
+    cell = cf.df.at[cf.df.index[0], "levered_net_capital_flows"].round()    
+    assert cell == -396412.0   
+
+    cell = cf.df.at[cf.df.index[-1], "levered_net_capital_flows"].round()
+    assert cell ==  874396.0 
