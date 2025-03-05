@@ -84,7 +84,16 @@ class cashflow():
 
         self.levered_net_capital_flows(self.df)
 
-
+        self.levered_net_cash_flows(self.df)
+        
+    def levered_net_cash_flows(self, df):
+        
+        df["levered_net_cash_flows"] = 0.0
+        
+        sum = df["levered_net_capital_flows"] + df["levered_net_income_flows"]
+        
+        df["levered_net_cash_flows"] = sum
+        
     def levered_net_capital_flows(self, df):
         
         df["levered_net_capital_flows"] = 0.0
@@ -106,8 +115,8 @@ class cashflow():
 
 
     def printDF(self):
-       print(self.df.loc[:, "unlevered_net_income_flows":].head(24))
-       print(self.df.loc[:, "unlevered_net_income_flows":].tail(5))        
+       print(self.df.loc[:, "unlevered_net_cash_flows":].head(12))
+       print(self.df.loc[:, "unlevered_net_cash_flows":].tail(12))        
 
     def loan_repayment_lump_sum(self, df):
         
@@ -115,7 +124,7 @@ class cashflow():
         
         cell = df.at[df.index[0], "debt_drawdown"]
         
-        df.at[df.index[-1], "loan_repayment_lump_sum"] = cell
+        df.at[df.index[-1], "loan_repayment_lump_sum"] = -cell
         
         
     def loan_repayment_interest(self, 
@@ -150,7 +159,7 @@ class cashflow():
         if Are_you_financing_the_Property_with_a_Mortgage == "Yes":
         
             arrangment_fee = buy_to_let_morgage_calculator["Loan Arrangement Fees"]
-            df.at[df.index[0], "Loan Arrangement Fees"] = arrangment_fee
+            df.at[df.index[0], "loan_arrangement_fees"] = -arrangment_fee
             
         else:  
         

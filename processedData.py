@@ -135,5 +135,5 @@ buy_to_let_morgage_calculator = {
     "Stress Rate": 8.50,
     "5-Year Buy-to-Let (interest only) Mortgage rate (Non-UK)":	6.50,
     "5-Year Buy-to-Let (interest only) Mortgage rate (UK)":	4.50,
-    "Loan Arrangement Fees": 1000
+    "Loan Arrangement Fees": 1000.0
 }

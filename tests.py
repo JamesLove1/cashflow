@@ -85,4 +85,11 @@ def test_unlevered_net_cash_flows():
     assert cell == -396412.0   
 
     cell = cf.df.at[cf.df.index[-1], "levered_net_capital_flows"].round()
-    assert cell ==  874396.0 
+    assert cell ==  874397.0 
+    
+def levered_net_cash_flows():
+    cell = cf.df.at[cf.df.index[0], "levered_net_cash_flows"].round()    
+    assert cell == -395979.0   
+
+    cell = cf.df.at[cf.df.index[-1], "levered_net_cash_flows"].round()
+    assert cell ==  875190.0 
