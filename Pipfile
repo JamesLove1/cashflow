@@ -7,6 +7,8 @@ name = "pypi"
 pandas = "*"
 pytest = "*"
 openpyxl = "*"
+numpy-financial = "*"
+pyxirr = "*"
 
 [dev-packages]
 pytest = "*"

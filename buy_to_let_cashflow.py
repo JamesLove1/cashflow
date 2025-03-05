@@ -3,6 +3,8 @@ import time
 from datetime import datetime
 import calendar
 import math
+import numpy_financial as npf
+from pyxirr import xirr
 
 from processedData import processedData, calculate_sdlt, purchaser_costs, buy_to_let_morgage_calculator
 
@@ -84,7 +86,31 @@ class cashflow():
 
         self.levered_net_capital_flows(self.df)
 
-        self.levered_net_cash_flows(self.df)
+        self.levered_net_cash_flows(self.df) 
+
+    def five_Year_levered_Total_Return_Pre_Tax(self):
+        return round(xirr(self.df["levered_net_cash_flows"]),4)
+    
+    def five_Year_levered_Money_Multiple_Pre_Tax(self, df):
+        smaller = self.df[self.df["levered_net_cash_flows"]>0]["levered_net_cash_flows"].sum()
+        
+        grater = self.df[self.df["levered_net_cash_flows"]< 0]["levered_net_cash_flows"].sum()
+        
+        return smaller / abs(grater)
+
+    def five_Year_Unlevered_Total_Return_Pre_Tax(self):
+        return round(xirr(self.df["unlevered_net_cash_flows"]),4)
+    
+    def five_Year_Unlevered_Money_Multiple_Pre_Tax(self, df):
+        smaller = self.df[self.df["unlevered_net_cash_flows"]>0]["unlevered_net_cash_flows"].sum()
+        
+        grater = self.df[self.df["unlevered_net_cash_flows"]< 0]["unlevered_net_cash_flows"].sum()
+        
+        return smaller / abs(grater)
+              
+    def printDF(self):
+       print(self.df.loc[:, "unlevered_net_cash_flows":].head(12))
+       print(self.df.loc[:, "unlevered_net_cash_flows":].tail(12))  
         
     def levered_net_cash_flows(self, df):
         
@@ -110,13 +136,7 @@ class cashflow():
         df["levered_net_income_flows"] = 0.0
 
         sum = df["unlevered_net_income_flows"] + df["loan_repayment_interest"]
-        df["levered_net_income_flows"] = sum
-
-
-
-    def printDF(self):
-       print(self.df.loc[:, "unlevered_net_cash_flows":].head(12))
-       print(self.df.loc[:, "unlevered_net_cash_flows":].tail(12))        
+        df["levered_net_income_flows"] = sum      
 
     def loan_repayment_lump_sum(self, df):
         
@@ -400,5 +420,5 @@ cf = cashflow(Monthly_Gross_Rent_GBP = 2750,
 
 cf.printDF()
 
-
+print(cf.five_Year_Unlevered_Total_Return_Pre_Tax())
 

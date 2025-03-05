@@ -93,3 +93,33 @@ def levered_net_cash_flows():
 
     cell = cf.df.at[cf.df.index[-1], "levered_net_cash_flows"].round()
     assert cell ==  875190.0 
+
+def test_five_Year_Unlevered_Total_Return_Pre_Tax():
+    
+    res = cf.five_Year_Unlevered_Total_Return_Pre_Tax()
+    
+    assert res == 0.0788
+     
+# TODO: I need to test this func much more
+def test_five_Year_Unlevered_Money_Multiple_Pre_Tax():
+    
+    res = cf.five_Year_Unlevered_Money_Multiple_Pre_Tax(cf.df)
+    
+    res = round(res, 2)
+    
+    assert res == 1.98
+    
+def test_five_Year_levered_Total_Return_Pre_Tax():
+    
+    res = cf.five_Year_levered_Total_Return_Pre_Tax()
+    
+    assert res == 0.0965
+    
+# TODO: I need to test this func much more
+def test_five_Year_levered_Money_Multiple_Pre_Tax():
+    
+    res = cf.five_Year_levered_Money_Multiple_Pre_Tax(cf.df)
+    
+    res = round(res, 2)
+    
+    assert res == 2.39
