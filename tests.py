@@ -26,6 +26,8 @@ def test_unlevered_net_income_flows():
     
     assert net_income.equals(unlevered_net_income_flows)
     
+    # cf.printDF()
+    
     
 
 

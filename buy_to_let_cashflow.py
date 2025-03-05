@@ -75,8 +75,8 @@ class cashflow():
 
         rpi_multiplyer = self.ammount_of_1GBP_for_x_years_at_RPI(df.index.year, startyear)
 
-        df["Gross Rent (Full Occupancy)"] = (Monthly_Gross_Rent_GBP * rpi_multiplyer).round(0)
-        df["Gross Rent (Full Occupancy)"] = df["Gross Rent (Full Occupancy)"].astype(int)
+        df["Gross_Rent_(Full_Occupancy)"] = (Monthly_Gross_Rent_GBP * rpi_multiplyer).round(0)
+        df["Gross_Rent_(Full_Occupancy)"] = df["Gross_Rent_(Full_Occupancy)"].astype(int)
 
     def add_man_and_letting_fees(self, df, startYear, Property_Location):
 
@@ -86,24 +86,24 @@ class cashflow():
         rpi_multiplyer = self.ammount_of_1GBP_for_x_years_at_RPI(df.index.year, startYear)
         rpi_multiplyer.round(2)
 
-        newColExFeesAdj =  df["Void (Vacancy)"] + df["Gross Rent (Full Occupancy)"]
+        newColExFeesAdj =  df["Void_(Vacancy)"] + df["Gross_Rent_(Full_Occupancy)"]
         newColExFeesAdj *= fees
         newColExFeesAdj  = newColExFeesAdj.round(0)
         newColExFeesAdj *= rpi_multiplyer
-        df["Property Management and Letting Fees"] = -newColExFeesAdj
+        df["Property_Management_and_Letting_Fees"] = -newColExFeesAdj
 
-        df["Property Management and Letting Fees"] = df["Property Management and Letting Fees"].astype(int)
+        df["Property_Management_and_Letting_Fees"] = df["Property_Management_and_Letting_Fees"].astype(int)
 
     def add_vacancy(self, df, Property_Location):
 
         percentageVacancyRate = processedData[Property_Location]["Average Annual Vacancy"]
 
-        df["Void (Vacancy)"] = - round(df["Gross Rent (Full Occupancy)"] * (percentageVacancyRate/100),0)
-        df["Void (Vacancy)"] = df["Void (Vacancy)"].astype(int)
+        df["Void_(Vacancy)"] = - round(df["Gross_Rent_(Full_Occupancy)"] * (percentageVacancyRate/100),0)
+        df["Void_(Vacancy)"] = df["Void_(Vacancy)"].astype(int)
 
     def add_ground_rent(self, df, Annual_Ground_Rent_and_Service_Charge_GBP, startYear):
 
-        df["Ground Rent Charges (if any)"] = 0
+        df["Ground_Rent_Charges_(if_any)"] = 0
         
         if Annual_Ground_Rent_and_Service_Charge_GBP is None:
             return
@@ -116,13 +116,13 @@ class cashflow():
         rpi_multiplyer = self.ammount_of_1GBP_for_x_years_at_RPI(df.index.year, startYear)
         res = amortized_yearly_ground_rent * rpi_multiplyer 
 
-        df["Ground Rent Charges (if any)"] = res
+        df["Ground_Rent_Charges_(if_any)"] = res
 
     def add_Net_Rent(self, df):
         
-        rentPlusVoid = df["Gross Rent (Full Occupancy)"] + df["Void (Vacancy)"] 
+        rentPlusVoid = df["Gross_Rent_(Full_Occupancy)"] + df["Void_(Vacancy)"] 
         
-        df["Net Rent"] = rentPlusVoid + df["Property Management and Letting Fees"]
+        df["Net_Rent"] = rentPlusVoid + df["Property_Management_and_Letting_Fees"]
 
     def add_property_insurance(self, df, startYear, Property_Location, Property_Value_GBP):
         property_insurance_rate = processedData[Property_Location]["Average Property Insurance"] / 100
@@ -131,11 +131,11 @@ class cashflow():
         rpi_multiplyer = self.ammount_of_1GBP_for_x_years_at_RPI(df.index.year, startYear)
         insurance_inflation_adj = insurance * rpi_multiplyer
 
-        df["Property Insurance"] = - insurance_inflation_adj 
+        df["Property_Insurance"] = - insurance_inflation_adj 
 
-        df["Property Insurance"].round(0)
+        df["Property_Insurance"].round(0)
 
-        df["Property Insurance"] = df["Property Insurance"].astype(int)
+        df["Property_Insurance"] = df["Property_Insurance"].astype(int)
 
     def add_maintenaince(self, df, Property_Value_GBP, startYear, Property_Location):
 
@@ -149,11 +149,11 @@ class cashflow():
         df["Maintenaince"] = df["Maintenaince"].astype(int)
 
     def add_net_income(self, df):
-        df["net_income"] = df["Net Rent"] + df["Property Insurance"] + df["Maintenaince"]
+        df["net_income"] = df["Net_Rent"] + df["Property_Insurance"] + df["Maintenaince"]
 
     def add_total_target_purchase_price(self, df, Property_Value_GBP):
 
-        df["total_target_purchase_price"] = 0  # Initialize column if missing
+        df["total_target_purchase_price"] = 0
 
         df.at[df.index[0], "total_target_purchase_price"] = -Property_Value_GBP
 
@@ -167,19 +167,26 @@ class cashflow():
 
     def purcheser_fees(self, df):
 
-            fees = ["Legal Fees", "Valuation", "Survey", "Other (Misc)"]
+            fees = ["Legal_Fees", "Valuation", "Survey", "Other_(Misc)"]
 
             for fee in fees:
 
                 df[fee] = 0
 
-                df.at[df.index[0], fee] = -purchaser_costs[fee]
+                if fee == fees[0]:
+                    df.at[df.index[0], fee] = -purchaser_costs["Legal Fees"]
+
+                elif fee == fees[-1]:
+                    df.at[df.index[0], fee] = -purchaser_costs["Other (Misc)"]
+                
+                else:
+                    df.at[df.index[0], fee] = -purchaser_costs[fee]
 
     def all_in_Acquistion_Cost(self, df, Property_Value_GBP, Your_Place_of_Residency):
 
-        df["All-in Acquistion Cost"] = 0
+        df["All-in_Acquistion_Cost"] = 0
 
-        fees = ["Legal Fees", "Valuation", "Survey", "Other (Misc)"]
+        fees = ["Legal_Fees", "Valuation", "Survey", "Other_(Misc)"]
 
         cnt = 0
 
@@ -190,7 +197,7 @@ class cashflow():
         cnt -= calculate_sdlt(Property_Value_GBP, Your_Place_of_Residency)
         cnt += df.at[df.index[0], "total_target_purchase_price"]
 
-        df.at[df.index[0], "All-in Acquistion Cost"] = cnt    
+        df.at[df.index[0], "All-in_Acquistion_Cost"] = cnt    
 
     def portfolio_disposal(self, df, Property_Location, startYear):
 
@@ -210,17 +217,17 @@ class cashflow():
         df.T.to_excel("out.xlsx", engine="openpyxl")
 
    
-# x = cashflow(Monthly_Gross_Rent_GBP = 2750,
-        #   Property_Location = "Greater London",                  
-        #   Annual_Ground_Rent_and_Service_Charge_GBP = 0,
-        #   Property_Value_GBP = 650000,
-        #   Property_Type = "Apartment",                           
-        #   Your_Place_of_Residency = "UK Resident",               
-        #   What_Entity_is_Purchasing_the_Property = "Company",    
-        #   Are_you_financing_the_Property_with_a_Mortgage = "Yes" 
-        #   )
+cf = cashflow(Monthly_Gross_Rent_GBP = 2750,
+          Property_Location = "Greater London",                  
+          Annual_Ground_Rent_and_Service_Charge_GBP = 0,
+          Property_Value_GBP = 650000,
+          Property_Type = "Apartment",                           
+          Your_Place_of_Residency = "UK Resident",               
+          What_Entity_is_Purchasing_the_Property = "Company",    
+          Are_you_financing_the_Property_with_a_Mortgage = "Yes" 
+          )
 
-# x.printDF()
+cf.printDF()
 
 
 
