@@ -63,7 +63,6 @@ class cashflow():
        print(self.df.loc[:, :"net_income"].head(24))
        print(self.df.loc[:, :"net_income"].tail(5))        
 
-      
     def add_unlevered_net_income_flows(self, df):
         
         df["unlevered_net_income_flows"] = df["net_income"]
@@ -91,7 +90,7 @@ class cashflow():
         newColExFeesAdj *= fees
         newColExFeesAdj  = newColExFeesAdj.round(0)
         newColExFeesAdj *= rpi_multiplyer
-        df["Property Management and Letting Fees"] = - newColExFeesAdj
+        df["Property Management and Letting Fees"] = -newColExFeesAdj
 
         df["Property Management and Letting Fees"] = df["Property Management and Letting Fees"].astype(int)
 
