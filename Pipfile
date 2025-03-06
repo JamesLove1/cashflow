@@ -9,6 +9,7 @@ pytest = "*"
 openpyxl = "*"
 numpy-financial = "*"
 pyxirr = "*"
+fastapi = {extras = ["standard"], version = "*"}
 
 [dev-packages]
 pytest = "*"

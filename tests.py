@@ -1,5 +1,5 @@
 
-import buy_to_let_cashflow
+import cashflow
 import pytest
 
 cf = None
@@ -8,7 +8,7 @@ cf = None
 def setup():
 
     global cf 
-    cf = buy_to_let_cashflow.cashflow(
+    cf = cashflow.cashflow(
         Monthly_Gross_Rent_GBP = 2750,
         Property_Location = "Greater London",                  
         Annual_Ground_Rent_and_Service_Charge_GBP = 0,
